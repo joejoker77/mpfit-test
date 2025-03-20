@@ -1,0 +1,52 @@
+services:
+  nginx:
+    image: nginx:latest
+    container_name: mpfit_nginx
+    ports:
+      - "8010:80"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./data/nginx:/var/log/nginx
+      - ./public:/var/www/html:ro
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    depends_on:
+      - php
+    networks:
+      - mpfit_network
+
+  php:
+    build:
+      context: .
+      dockerfile: franken.dockerfile
+    container_name: mpfit_franken
+    env_file:
+      - ./.env.local
+    ports:
+      - "8011:80"
+    volumes:
+      - ./:/app:rw
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    networks:
+      - mpfit_network
+  db:
+    image: mysql:8.0
+    container_name: mpfit_mysql
+    env_file:
+      - ./.env.local
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD}
+      MYSQL_DATABASE: ${DB_NAME}
+      MYSQL_USER: ${DB_USER}
+      MYSQL_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      - ./data/mysql:/var/lib/mysql
+    networks:
+      - mpfit_network
+    ports:
+      - "8012:3306"
+
+networks:
+  mpfit_network:
+    driver: bridge
